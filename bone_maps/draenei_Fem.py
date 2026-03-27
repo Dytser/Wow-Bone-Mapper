@@ -1,4 +1,4 @@
-LABEL = "Draenei"
+LABEL = "Draenei + LF"
 TYPE = "Character"       # REQUIRED
 SUBTYPE = "Female"      # OPTIONAL (can be None)
 
