@@ -18,7 +18,9 @@ Doing so is simple:
 3. Name it whatever you want, If you aim to contribute it here, Please name it sensibly.
 4. Use the following template structure to map the bones and set the label.
 ```
-LABEL = "Name"
+LABEL = "Velf & Belf"
+TYPE = "Character"       # REQUIRED
+SUBTYPE = "Female"      # OPTIONAL (can be None)
 BONES = [
     #### Core Bones ####
     ("Bone001", "Root"),
@@ -30,6 +32,7 @@ BONES = [
     ("Bone040", "Arm_L"),
 ```
 *While # is entirely optional for commenting it does help organisation and seeing where things is.*
+Contributions with additional bone maps would be very welcome! Simply open an issue so people know you are working on it and then later a pull request when you are ready to merge it.
 
 ### Reasons why you might want to do this
 * Blenders mirror modifier now functions.
