@@ -13,7 +13,7 @@ Once you have done all your work and want to export it again. Hit the pressed bu
 ### Bonemap not available
 I have only created a handful of bonemaps to come with the addon by default. Any additional ones you have to create yourself.
 Doing so is simple: 
-1. Navigate to ``%Appdata%\Blender Foundation\Blender\5.1\scripts\addons\WowBoneMapper\bone_maps``
+1. Navigate to ``%Appdata%\Blender Foundation\Blender\5.1\scripts\addons\Wow-Bone-Mapper\bone_maps``
 2. Create a new .py file or if you are making a new player model i suggest copying a pre existing one.
 3. Name it whatever you want, If you aim to contribute it here, Please name it sensibly.
 4. Use the following template structure to map the bones and set the label.
@@ -37,6 +37,6 @@ Contributions with additional bone maps would be very welcome! Simply open an is
 ### Reasons why you might want to do this
 * Blenders mirror modifier now functions.
 * Blenders built in X Modifier now works as intended.
-* Vertex Painting is now a breeze.
+* Weight Painting is now a breeze.
 * UV Mapping easier than ever.
 * You can go drink a coffee with all the time you save from using mirroring features
