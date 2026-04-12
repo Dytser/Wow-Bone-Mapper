@@ -1,6 +1,11 @@
+# REQUIRED FIELDS:
 LABEL = "Night Borne"
-TYPE = "Character"       # REQUIRED
-SUBTYPE = "Female"      # OPTIONAL (can be None)
+TYPE = "Character"
+# OPTIONAL FIELDS: (can be None)
+SUBTYPE = "Female"
+M2 = [
+    "nightbornefemale",
+]
 
 BONES = [
     #### Core Bones ####

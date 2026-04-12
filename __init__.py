@@ -10,6 +10,7 @@ bl_info = {
 
 import bpy
 import importlib
+import importlib.util
 import pkgutil
 from pathlib import Path
 
@@ -17,61 +18,62 @@ from pathlib import Path
 # Preset loading
 # ---------------------------------------------------------------------------
 
-def _load_bone_maps() -> list[dict]:
+def _load_bone_maps_from_path(directory: Path, package_prefix: str) -> list[dict]:
     """
-    Scan the 'bone_maps' sub-package and return a list of bone map dicts.
-    Each bone map file must define:
+    Recursively scan a directory for bone map .py files.
+    Subfolders are traversed automatically — no __init__.py required inside them.
+    Each .py file must define:
         LABEL : str   — button / section label shown in the panel
         BONES : list  — list of ("IndexedName", "MirroredName") tuples
-
-    Files are loaded in filename order, so prefix with numbers to control
-    button order:  01_void_elf.py, 02_human_male.py …
+        TYPE  : str   — required armature type (e.g. "Human", "Creature")
+        SUBTYPE : str — optional subtype (e.g. "Female", "Male")
     """
     bone_maps = []
-    bone_maps_pkg_name = f"{__name__}.bone_maps"
 
-    try:
-        bone_maps_pkg = importlib.import_module(bone_maps_pkg_name)
-    except ModuleNotFoundError:
-        # bone_maps/ folder doesn't exist yet — return empty list gracefully
-        return bone_maps
+    for item in sorted(directory.iterdir()):
+        if item.is_dir():
+            # Recurse into subfolder — subfolders don't need an __init__.py
+            bone_maps.extend(
+                _load_bone_maps_from_path(item, f"{package_prefix}.{item.name}")
+            )
+        elif item.suffix == ".py" and item.stem != "__init__":
+            module_name = f"{package_prefix}.{item.stem}"
+            try:
+                spec = importlib.util.spec_from_file_location(module_name, item)
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
 
-    # __file__ is None for namespace packages (no __init__.py inside bone_maps/).
-    # __path__ always exists and points at the folder directly.
-    if bone_maps_pkg.__file__ is not None:
-        bone_maps_path = Path(bone_maps_pkg.__file__).parent
-    else:
-        bone_maps_path = Path(list(bone_maps_pkg.__path__)[0])
+                label = getattr(mod, "LABEL", item.stem.replace("_", " ").title())
+                bones = getattr(mod, "BONES", [])
 
-    for finder, module_name, _ in sorted(pkgutil.iter_modules([str(bone_maps_path)])):
-        full_name = f"{bone_maps_pkg_name}.{module_name}"
-        try:
-            mod = importlib.import_module(full_name)
+                armature_type = getattr(mod, "TYPE", None)
+                if not armature_type:
+                    raise ValueError(f"{item.name} is missing required 'TYPE'")
 
-            label = getattr(mod, "LABEL", module_name.replace("_", " ").title())
-            bones = getattr(mod, "BONES", [])
+                subtype = getattr(mod, "SUBTYPE", None)
 
-            # ---- NEW ----
-            armature_type = getattr(mod, "TYPE", None)
-            if not armature_type:
-                raise ValueError(f"{module_name} is missing required 'TYPE'")
+                bone_maps.append({
+                    "id": module_name,          # now unique across subfolders
+                    "label": label,
+                    "bones": bones,
+                    "type": armature_type,
+                    "subtype": subtype,
+                    "mod": mod,
+                })
 
-            subtype = getattr(mod, "SUBTYPE", None)
-
-            bone_maps.append({
-                "id": module_name,
-                "label": label,
-                "bones": bones,
-                "type": armature_type,
-                "subtype": subtype,
-                "mod": mod,
-            })
-
-
-        except Exception as e:
-            print(f"[Bone Mapper] Failed to load bone map '{full_name}': {e}")
+            except Exception as e:
+                print(f"[Bone Mapper] Failed to load bone map '{item}': {e}")
 
     return bone_maps
+
+
+def _load_bone_maps() -> list[dict]:
+    """Entry point: locate the bone_maps folder and kick off recursive loading."""
+    bone_maps_dir = Path(__file__).parent / "bone_maps"
+    if not bone_maps_dir.is_dir():
+        return []
+
+    return _load_bone_maps_from_path(bone_maps_dir, f"{__name__}.bone_maps")
 
 
 # Loaded once at registration; also refreshed on demand via the operator.
@@ -119,8 +121,8 @@ def _is_using_mirrored_names(armature_obj, bones: list) -> bool:
         if indexed in bone_data:
             indexed_count += 1
 
-    # Decide based on majority
     return mirrored_count > indexed_count
+
 
 def _group_bone_maps(bone_maps):
     grouped = {}
@@ -133,6 +135,7 @@ def _group_bone_maps(bone_maps):
         grouped[t][g].append(m)
 
     return grouped
+
 
 # ---------------------------------------------------------------------------
 # Operators
@@ -152,7 +155,6 @@ class BONEMAPPER_OT_toggle(bpy.types.Operator):
             self.report({'WARNING'}, "No armature selected or active.")
             return {'CANCELLED'}
 
-        # Find the matching bone map
         bone_map = next((m for m in _BONE_MAPS if m["id"] == self.bone_map_id), None)
         if bone_map is None:
             self.report({'ERROR'}, f"Bone map not found: '{self.bone_map_id}'")
@@ -162,7 +164,6 @@ class BONEMAPPER_OT_toggle(bpy.types.Operator):
         to_mirrored = not _is_using_mirrored_names(armature, bones)
         count = _rename_bones(armature, bones, to_mirrored)
 
-        # ---- NEW: store active preset ----
         if to_mirrored:
             armature["bone_mapper_active"] = self.bone_map_id
         else:
@@ -195,13 +196,12 @@ class BONEMAPPER_PT_panel(bpy.types.Panel):
     bl_label = "Bone Mapper"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "WoW"             # WowTools already adds a Npanel. So it slots into that.
+    bl_category = "WoW"
 
     def draw(self, context):
         layout = self.layout
         armature = _get_armature(context)
 
-        # Armature status
         box = layout.box()
         if armature:
             box.label(text=f"Armature: {armature.name}", icon='ARMATURE_DATA')
@@ -215,19 +215,18 @@ class BONEMAPPER_PT_panel(bpy.types.Panel):
             layout.label(text="Add .py files to bone_maps/")
             layout.separator(type='LINE')
         else:
-
             grouped = _group_bone_maps(_BONE_MAPS)
 
             for bone_type, genders in grouped.items():
                 box = layout.box()
                 box.label(text=bone_type, icon='GROUP')
-            
+
                 for gender, maps in genders.items():
                     col = box.column(align=True)
-            
+
                     if gender and gender != "Unknown":
                         col.label(text=gender, icon='USER')
-            
+
                     for bone_map in maps:
                         if armature:
                             active_map = armature.get("bone_mapper_active")
@@ -236,7 +235,7 @@ class BONEMAPPER_PT_panel(bpy.types.Panel):
                         else:
                             using_mirrored = False
                             btn_icon = 'FILE_REFRESH'
-            
+
                         op = col.operator(
                             BONEMAPPER_OT_toggle.bl_idname,
                             text=bone_map["label"],
@@ -245,10 +244,8 @@ class BONEMAPPER_PT_panel(bpy.types.Panel):
                         )
                         op.bone_map_id = bone_map["id"]
 
-                
             layout.separator(type='LINE')
 
-        # Reload button at the bottom
         layout.operator(
             BONEMAPPER_OT_reload.bl_idname,
             text="Reload Bone Maps",

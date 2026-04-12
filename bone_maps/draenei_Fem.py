@@ -1,6 +1,12 @@
+# REQUIRED FIELDS:
 LABEL = "Draenei + LF"
-TYPE = "Character"       # REQUIRED
-SUBTYPE = "Female"      # OPTIONAL (can be None)
+TYPE = "Character"
+# OPTIONAL FIELDS: (can be None)
+SUBTYPE = "Female"
+M2 = [
+    "draeneifemale_hd",
+    "lightforgeddraeneifemale",
+]
 
 BONES = [
     #### Core Bones ####
@@ -9,8 +15,8 @@ BONES = [
     ("Bone003", "Spine_1"),
     ("Bone011", "Spine_2"),
     ("Bone019", "Spine_3"),
-    ("Bone031", "Neck1"),
-    ("Bone041", "Neck2"),
+    ("Bone031", "Neck_1"),
+    ("Bone041", "Neck_2"),
     ("Bone052", "Head"),
     # Left Arms
     ("Bone030", "Shoulder_L"),

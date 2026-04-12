@@ -1,6 +1,11 @@
+# REQUIRED FIELDS:
 LABEL = "Human"
-TYPE = "Character"       # REQUIRED
-SUBTYPE = "Female"      # OPTIONAL (can be None)
+TYPE = "Character"
+# OPTIONAL FIELDS: (can be None)
+SUBTYPE = "Female"
+M2 = [
+    "humanfemale_hd",
+]
 
 BONES = [
     #### Core Bones ####
@@ -9,8 +14,8 @@ BONES = [
     ("Bone003", "Spine_1"),
     ("Bone009", "Spine_2"),
     ("Bone016", "Spine_3"),
-    ("Bone025", "Neck1"),
-    ("Bone032", "Neck2"),
+    ("Bone025", "Neck_1"),
+    ("Bone032", "Neck_2"),
     ("Bone042", "Head"),
     # Left Arms
     ("Bone021", "Shoulder_L"),
